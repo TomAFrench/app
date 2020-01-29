@@ -6,6 +6,7 @@ import { H2, H3 } from '../Typography/Basic'
 import mq from 'mediaQuery'
 import { EDIT_PROFILE } from '../../modals'
 import GlobalContext from '../../GlobalState'
+import { useModalContext } from '../../contexts/ModalContext'
 import Button from '../Forms/Button'
 import DefaultTwitterAvatar from '../User/TwitterAvatar'
 
@@ -59,7 +60,8 @@ const EditProfile = styled(Button)`
 
 export default function UserProfile({ profile: p }) {
   const twitter = getSocialId(p.social, 'twitter')
-  const { showModal, loggedIn, userProfile } = useContext(GlobalContext)
+  const [, { showModal }] = useModalContext()
+  const { loggedIn, userProfile } = useContext(GlobalContext)
   return (
     <UserProfileWrapper>
       <UserProfileContainer>

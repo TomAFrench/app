@@ -25,6 +25,30 @@ const Username = styled('div')`
   text-overflow: ellipsis;
 `
 
+const UserButton = ({ userProfile }) => {
+  const twitterProfile =
+    userProfile &&
+    userProfile.social &&
+    userProfile.social.find(s => s.type === 'twitter')
+  return (
+    <>
+      {/* <Notifications>Notification</Notifications> */}
+      <Account to={`/user/${userProfile.username}`}>
+        {userProfile ? (
+          <Username data-testid="userprofile-name">
+            {userProfile.username}
+          </Username>
+        ) : null}
+        <Avatar
+          src={`https://avatars.io/twitter/${
+            twitterProfile ? twitterProfile.value : 'unknowntwitter123abc'
+          }/medium`}
+        />
+      </Account>
+    </>
+  )
+}
+
 function SignInButton() {
   const _signIn = ({
     showTooltip,
@@ -50,34 +74,9 @@ function SignInButton() {
 
   return (
     <GlobalConsumer>
-      {({
-        reloadUserAddress,
-        userProfile,
-        networkState,
-        loggedIn,
-        signIn,
-        showModal
-      }) => {
-        const twitterProfile =
-          userProfile &&
-          userProfile.social &&
-          userProfile.social.find(s => s.type === 'twitter')
+      {({ reloadUserAddress, userProfile, networkState, loggedIn, signIn }) => {
         return loggedIn && userProfile ? (
-          <>
-            {/* <Notifications>Notification</Notifications> */}
-            <Account to={`/user/${userProfile.username}`}>
-              {userProfile ? (
-                <Username data-testid="userprofile-name">
-                  {userProfile.username}
-                </Username>
-              ) : null}
-              <Avatar
-                src={`https://avatars.io/twitter/${
-                  twitterProfile ? twitterProfile.value : 'unknowntwitter123abc'
-                }/medium`}
-              />
-            </Account>
-          </>
+          <UserButton userProfile={userProfile} />
         ) : (
           <Tooltip text={CANNOT_RESOLVE_ACCOUNT_ADDRESS} position="left">
             {({ tooltipElement, showTooltip, hideTooltip }) => (

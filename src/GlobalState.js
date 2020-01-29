@@ -35,17 +35,12 @@ const TOKEN_ALGORITHM = 'HS256'
 class Provider extends Component {
   state = {
     apolloClient: this.props.client,
-    currentModal: null,
     auth: LocalStorage.getItem(AUTH) || {},
     networkState: {}
   }
 
   authToken() {
     return this.state.auth.token
-  }
-
-  apolloClient() {
-    return this.state.apolloClient
   }
 
   isLoggedIn() {
@@ -101,7 +96,8 @@ class Provider extends Component {
       }))
 
       if (!dontForceSignIn) {
-        this.showModal({ name: SIGN_IN })
+        const [, { showModal }] = this.props.modalContext
+        showModal({ name: SIGN_IN })
 
         return signInPromise
       }
@@ -146,24 +142,6 @@ class Provider extends Component {
     }))
   }
 
-  showModal = modal => {
-    this.setState({
-      currentModal: modal
-    })
-  }
-
-  closeModal = modal => {
-    this.setState(state => {
-      if (state.currentModal && state.currentModal.name === modal.name) {
-        return {
-          currentModal: null
-        }
-      } else {
-        return state
-      }
-    })
-  }
-
   async componentDidMount() {
     await this.reloadUserAddress()
 
@@ -201,8 +179,6 @@ class Provider extends Component {
     return (
       <GlobalContext.Provider
         value={{
-          apolloClient: this.apolloClient(),
-          currentModal: this.state.currentModal,
           userAddress: this.state.auth.address,
           reloadUserAddress: this.reloadUserAddress,
           userProfile: this.state.auth.profile,
@@ -210,8 +186,6 @@ class Provider extends Component {
           loggedIn: this.isLoggedIn(),
           signIn: this.signIn,
           signInError: this.state.signInError,
-          showModal: this.showModal,
-          closeModal: this.closeModal,
           setAuthTokenFromSignature: this.setAuthTokenFromSignature,
           setUserProfile: this.setUserProfile
         }}
