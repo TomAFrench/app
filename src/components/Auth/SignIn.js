@@ -11,12 +11,12 @@ import {
 } from '../../graphql/queries'
 import SafeMutation from '../SafeMutation'
 import SafeQuery from '../SafeQuery'
-import { GlobalConsumer } from '../../GlobalState'
 import RefreshAuthTokenButton from './RefreshAuthTokenButton'
 import { H2 as DefaultH2 } from '../Typography/Basic'
 import { ReactComponent as DefaultPencil } from '../svg/Pencil.svg'
 import { SIGN_IN } from '../../modals'
 import { useModalContext } from '../../contexts/ModalContext'
+import { useUserAddress } from '../../contexts/AuthContext'
 
 const SignInContainer = styled('div')``
 
@@ -117,32 +117,29 @@ const signInOrSignUp = ({
 }
 
 export default function SignIn(props) {
-  const [, { setModal }] = useModalContext()
+  const [, { closeModal }] = useModalContext()
+  const userAddress = useUserAddress()
 
   const close = () => {
-    setModal({ name: SIGN_IN })
+    closeModal({ name: SIGN_IN })
   }
 
   return (
     <SignInContainer data-testid="sign-in-modal">
-      <GlobalConsumer>
-        {({ userAddress }) => (
-          <SafeQuery
-            query={USER_PROFILE_QUERY}
-            variables={{ address: userAddress }}
-          >
-            {result => {
-              const hasProfile = !!_.get(result, 'data.profile.username')
+      <SafeQuery
+        query={USER_PROFILE_QUERY}
+        variables={{ address: userAddress }}
+      >
+        {result => {
+          const hasProfile = !!_.get(result, 'data.profile.username')
 
-              if (hasProfile) {
-                return <RenderSignIn userAddress={userAddress} close={close} />
-              } else {
-                return <RenderSignUp userAddress={userAddress} close={close} />
-              }
-            }}
-          </SafeQuery>
-        )}
-      </GlobalConsumer>
+          if (hasProfile) {
+            return <RenderSignIn userAddress={userAddress} close={close} />
+          } else {
+            return <RenderSignUp userAddress={userAddress} close={close} />
+          }
+        }}
+      </SafeQuery>
     </SignInContainer>
   )
 }

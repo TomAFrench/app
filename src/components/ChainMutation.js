@@ -16,6 +16,7 @@ import Button from './Forms/Button'
 import WarningBox from './WarningBox'
 import { NEW_BLOCK } from '../utils/events'
 import { NUM_CONFIRMATIONS } from '../config'
+import { AuthContext } from '../contexts/AuthContext'
 
 export default class ChainMutation extends Component {
   static propTypes = {
@@ -260,32 +261,36 @@ export class ChainMutationButton extends Component {
       'Please sign the created transaction using your wallet or Dapp browser'
 
     return (
-      <GlobalConsumer>
-        {({ networkState, reloadUserAddress }) => (
-          <>
-            <Tooltip text={tip} ref={this._onTooltipRef}>
-              {({ tooltipElement }) => (
-                <Button
-                  {...props}
-                  onClick={() =>
-                    this._onClick({
-                      networkState,
-                      reloadUserAddress,
-                      postMutation: onClick,
-                      action: props.analyticsId
-                    })
-                  }
-                  disabled={!!(loading || progress)}
-                >
-                  {content}
-                  {tooltipElement}
-                </Button>
-              )}
-            </Tooltip>
-            {after}
-          </>
+      <AuthContext.Consumer>
+        {([, { reloadUserAddress }]) => (
+          <GlobalConsumer>
+            {({ networkState }) => (
+              <>
+                <Tooltip text={tip} ref={this._onTooltipRef}>
+                  {({ tooltipElement }) => (
+                    <Button
+                      {...props}
+                      onClick={() =>
+                        this._onClick({
+                          networkState,
+                          reloadUserAddress,
+                          postMutation: onClick,
+                          action: props.analyticsId
+                        })
+                      }
+                      disabled={!!(loading || progress)}
+                    >
+                      {content}
+                      {tooltipElement}
+                    </Button>
+                  )}
+                </Tooltip>
+                {after}
+              </>
+            )}
+          </GlobalConsumer>
         )}
-      </GlobalConsumer>
+      </AuthContext.Consumer>
     )
   }
 

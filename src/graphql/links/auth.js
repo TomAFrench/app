@@ -5,7 +5,7 @@ import {
   removeDirectivesFromDocument
 } from 'apollo-utilities'
 
-import { getProvider as getGlobalProvider } from '../../GlobalState'
+import { getProvider as getAuthProvider } from '../../contexts/AuthContext'
 import { buildAuthHeaders } from '../../utils/requests'
 
 const sanitizedQueryCache = new Map()
@@ -50,23 +50,23 @@ export default () =>
     return new Observable(async observer => {
       let handle
 
-      // wait until global provider is ready
-      const globalProvider = await getGlobalProvider()
+      // wait until auth provider is ready
+      const [{ loggedIn, token }, { signIn }] = await getAuthProvider()
 
       // if user is not logged in and we require auth
-      if (!globalProvider.isLoggedIn() && requireAuth) {
+      if (!loggedIn && requireAuth) {
         try {
           // try logging in
-          await globalProvider.signIn()
+          await signIn()
         } catch (err) {
           return makeError(observer, err.message)
         }
       }
 
       // add auth headers if possible
-      if (globalProvider.isLoggedIn()) {
+      if (loggedIn) {
         operation.setContext({
-          headers: buildAuthHeaders(globalProvider.authToken())
+          headers: buildAuthHeaders(token)
         })
       }
 

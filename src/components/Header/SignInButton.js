@@ -8,6 +8,7 @@ import Button from '../Forms/Button'
 import Avatar from '../User/Avatar'
 import { CANNOT_RESOLVE_ACCOUNT_ADDRESS } from '../../utils/errors'
 import Assist from './Assist'
+import { useAuthContext } from '../../contexts/AuthContext'
 
 const Account = styled(Link)`
   display: flex;
@@ -49,14 +50,13 @@ const UserButton = ({ userProfile }) => {
   )
 }
 
-function SignInButton() {
-  const _signIn = ({
-    showTooltip,
-    hideTooltip,
-    signIn,
-    networkState,
-    reloadUserAddress
-  }) => async () => {
+const SignInButton = () => {
+  const [
+    { loggedIn, profile },
+    { reloadUserAddress, signIn }
+  ] = useAuthContext()
+
+  const _signIn = ({ showTooltip, hideTooltip, networkState }) => async () => {
     hideTooltip()
     let assist = await Assist({
       action: 'Sign in',
@@ -72,32 +72,30 @@ function SignInButton() {
     }
   }
 
+  if (loggedIn && profile) {
+    return <UserButton userProfile={profile} />
+  }
+
   return (
     <GlobalConsumer>
-      {({ reloadUserAddress, userProfile, networkState, loggedIn, signIn }) => {
-        return loggedIn && userProfile ? (
-          <UserButton userProfile={userProfile} />
-        ) : (
-          <Tooltip text={CANNOT_RESOLVE_ACCOUNT_ADDRESS} position="left">
-            {({ tooltipElement, showTooltip, hideTooltip }) => (
-              <Button
-                type="light"
-                onClick={_signIn({
-                  showTooltip,
-                  hideTooltip,
-                  signIn,
-                  reloadUserAddress,
-                  networkState
-                })}
-                analyticsId="Sign In"
-              >
-                {tooltipElement}
-                Sign in
-              </Button>
-            )}
-          </Tooltip>
-        )
-      }}
+      {({ networkState }) => (
+        <Tooltip text={CANNOT_RESOLVE_ACCOUNT_ADDRESS} position="left">
+          {({ tooltipElement, showTooltip, hideTooltip }) => (
+            <Button
+              type="light"
+              onClick={_signIn({
+                showTooltip,
+                hideTooltip,
+                networkState
+              })}
+              analyticsId="Sign In"
+            >
+              {tooltipElement}
+              Sign in
+            </Button>
+          )}
+        </Tooltip>
+      )}
     </GlobalConsumer>
   )
 }

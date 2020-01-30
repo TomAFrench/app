@@ -12,6 +12,7 @@ import setupWeb3 from './api/web3'
 import ModalProvider, { ModalContext } from './contexts/ModalContext'
 import { GlobalProvider } from './GlobalState'
 import './globalStyles'
+import AuthProvider from './contexts/AuthContext'
 
 window.addEventListener('load', async () => {
   setupRollbar()
@@ -28,13 +29,15 @@ window.addEventListener('load', async () => {
   ReactDOM.render(
     <ApolloProvider client={clientInstance}>
       <ModalProvider>
-        <ModalContext.Consumer>
-          {context => (
-            <GlobalProvider modalContext={context}>
-              <App />
-            </GlobalProvider>
-          )}
-        </ModalContext.Consumer>
+        <AuthProvider>
+          <ModalContext.Consumer>
+            {context => (
+              <GlobalProvider modalContext={context}>
+                <App />
+              </GlobalProvider>
+            )}
+          </ModalContext.Consumer>
+        </AuthProvider>
       </ModalProvider>
     </ApolloProvider>,
     document.getElementById('root')

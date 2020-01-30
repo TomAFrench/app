@@ -1,4 +1,4 @@
-import React, { Component, Fragment } from 'react'
+import React, { Fragment } from 'react'
 import styled from 'react-emotion'
 
 import { amAdmin, getMyParticipantEntry } from '../../utils/parties'
@@ -11,7 +11,7 @@ import SafeQuery from '../SafeQuery'
 import EventInfo from './EventInfo'
 import EventCTA from './EventCTA'
 import EventParticipants from './EventParticipants'
-import { GlobalConsumer } from '../../GlobalState'
+import { useUserAddress } from '../../contexts/AuthContext'
 
 const SingleEventContainer = styled('div')`
   display: flex;
@@ -38,70 +38,61 @@ const RightContainer = styled('div')`
   `};
 `
 
-class SingleEventWrapper extends Component {
-  render() {
-    const { address } = this.props
+const SingleEventWrapper = ({ address }) => {
+  const userAddress = useUserAddress()
 
-    return (
-      <SingleEventContainer>
-        <GlobalConsumer>
-          {({ userAddress }) => (
-            <SafeQuery
-              query={PARTY_QUERY}
-              variables={{ address }}
-              fetchPolicy="cache-and-network"
-              pollInterval={60000}
-              keepExistingResultDuringRefetch={true}
-            >
-              {({ data: { party }, loading }) => {
-                // no party?
-                if (!party) {
-                  if (loading) {
-                    return <Loader />
-                  } else {
-                    return (
-                      <WarningBox>
-                        We could not find an event at the address {address}!
-                      </WarningBox>
-                    )
-                  }
-                }
-                // pre-calculate some stuff up here
-                const preCalculatedProps = {
-                  amAdmin: amAdmin(party, userAddress),
-                  myParticipantEntry: getMyParticipantEntry(party, userAddress)
-                }
+  return (
+    <SingleEventContainer>
+      <SafeQuery
+        query={PARTY_QUERY}
+        variables={{ address }}
+        fetchPolicy="cache-and-network"
+        pollInterval={60000}
+        keepExistingResultDuringRefetch={true}
+      >
+        {({ data: { party }, loading }) => {
+          // no party?
+          if (!party) {
+            if (loading) {
+              return <Loader />
+            } else {
+              return (
+                <WarningBox>
+                  We could not find an event at the address {address}!
+                </WarningBox>
+              )
+            }
+          }
+          // pre-calculate some stuff up here
+          const preCalculatedProps = {
+            amAdmin: amAdmin(party, userAddress),
+            myParticipantEntry: getMyParticipantEntry(party, userAddress)
+          }
 
-                return (
-                  <Fragment>
-                    <EventInfoContainer>
-                      <EventInfo
-                        party={party}
-                        address={address}
-                        {...preCalculatedProps}
-                      />
-                    </EventInfoContainer>
-                    <RightContainer>
-                      <EventCTA
-                        party={party}
-                        address={address}
-                        userAddress={userAddress}
-                        {...preCalculatedProps}
-                      />
-                      <EventParticipants
-                        party={party}
-                        {...preCalculatedProps}
-                      />
-                    </RightContainer>
-                  </Fragment>
-                )
-              }}
-            </SafeQuery>
-          )}
-        </GlobalConsumer>
-      </SingleEventContainer>
-    )
-  }
+          return (
+            <Fragment>
+              <EventInfoContainer>
+                <EventInfo
+                  party={party}
+                  address={address}
+                  {...preCalculatedProps}
+                />
+              </EventInfoContainer>
+              <RightContainer>
+                <EventCTA
+                  party={party}
+                  address={address}
+                  userAddress={userAddress}
+                  {...preCalculatedProps}
+                />
+                <EventParticipants party={party} {...preCalculatedProps} />
+              </RightContainer>
+            </Fragment>
+          )
+        }}
+      </SafeQuery>
+    </SingleEventContainer>
+  )
 }
 
 export default SingleEventWrapper

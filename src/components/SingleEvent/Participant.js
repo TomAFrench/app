@@ -9,7 +9,6 @@ import Status from './ParticipantStatus'
 import { calculateWinningShare } from '../../utils/parties'
 import tick from '../svg/tick.svg'
 import Currency from './Currency'
-import { GlobalConsumer } from '../../GlobalState'
 
 // import EtherScanLink from '../ExternalLinks/EtherScanLink'
 
@@ -71,43 +70,38 @@ function Participant({ participant, party, amAdmin, decimals }) {
   const payout = calculateWinningShare(deposit, numRegistered, numShowedUp)
 
   return (
-    <GlobalConsumer>
-      {({ userAddress, loggedIn }) => (
-        <ParticipantWrapper to={`/user/${user.username}`} amAdmin={amAdmin}>
-          <TwitterAvatar user={user} size={10} scale={6} />
-          <ParticipantId>
-            <ParticipantUsername>{user.username}</ParticipantUsername>
-          </ParticipantId>
-          {ended ? (
-            attended ? (
-              <Status type="won">
-                {`${withdrawn ? ' Withdrew' : 'Won'} `}
-                <Currency
-                  amount={payout}
-                  tokenAddress={party.tokenAddress}
-                  precision={3}
-                />
-              </Status>
-            ) : (
-              <Status type="lost">
-                Lost{' '}
-                <Currency amount={deposit} tokenAddress={party.tokenAddress} />{' '}
-              </Status>
-            )
+    <ParticipantWrapper to={`/user/${user.username}`} amAdmin={amAdmin}>
+      <TwitterAvatar user={user} size={10} scale={6} />
+      <ParticipantId>
+        <ParticipantUsername>{user.username}</ParticipantUsername>
+      </ParticipantId>
+      {ended ? (
+        attended ? (
+          <Status type="won">
+            {`${withdrawn ? ' Withdrew' : 'Won'} `}
+            <Currency
+              amount={payout}
+              tokenAddress={party.tokenAddress}
+              precision={3}
+            />
+          </Status>
+        ) : (
+          <Status type="lost">
+            Lost <Currency amount={deposit} tokenAddress={party.tokenAddress} />{' '}
+          </Status>
+        )
+      ) : (
+        <>
+          {attended ? (
+            <Status type="marked">
+              Marked attended <Tick />
+            </Status>
           ) : (
-            <>
-              {attended ? (
-                <Status type="marked">
-                  Marked attended <Tick />
-                </Status>
-              ) : (
-                <Status>Not marked attended</Status>
-              )}
-            </>
+            <Status>Not marked attended</Status>
           )}
-        </ParticipantWrapper>
+        </>
       )}
-    </GlobalConsumer>
+    </ParticipantWrapper>
   )
 }
 

@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React from 'react'
 import styled from 'react-emotion'
 import mq from '../mediaQuery'
 import { Route, Link } from 'react-router-dom'
@@ -10,9 +10,9 @@ import WarningBox from '../components/WarningBox'
 import { PARTY_QUERY } from '../graphql/queries'
 import { amAdmin } from '../utils/parties'
 import SafeQuery from '../components/SafeQuery'
-import { GlobalConsumer } from '../GlobalState'
 import EventEdit from '../components/SingleEvent/Admin/EventEdit'
 import colours from '../colours'
+import { useUserAddress } from '../contexts/AuthContext'
 
 const { primary500, primary400, primary300, primary200 } = colours
 
@@ -97,94 +97,79 @@ const BackArrow = styled(DefaultBackArrow)`
   margin-left: -4px;
 `
 
-class SingleEvent extends Component {
-  render() {
-    const { address } = this.props.match.params
-    const {
-      location: { pathname }
-    } = this.props
-    return (
-      <GlobalConsumer>
-        {({ userAddress }) =>
-          !userAddress ? (
-            <WarningBox>You need to be logged-in to view this page</WarningBox>
-          ) : (
-            <>
-              <BackToEventButton to={`/event/${address}`}>
-                <BackArrow /> Back to Event
-              </BackToEventButton>
-              <SafeQuery
-                query={PARTY_QUERY}
-                variables={{ address }}
-                fetchPolicy="cache-and-network"
-              >
-                {({ data: { party } }) => {
-                  const isAdmin = amAdmin(party, userAddress)
+const SingleEvent = ({ match, location }) => {
+  const { address } = match.params
+  const { pathname } = location
 
-                  if (!isAdmin) {
-                    return (
-                      <WarningBox>
-                        You need to be an admin to view this page
-                      </WarningBox>
-                    )
-                  }
+  const userAddress = useUserAddress()
 
-                  return (
-                    <SingleEventAdminContainer>
-                      <TabNavigation>
-                        <ToggleLink
-                          active={pathname === `/event/${address}/admin`}
-                          to={`/event/${address}/admin`}
-                        >
-                          Participants
-                        </ToggleLink>
-                        <ToggleLink
-                          active={pathname === `/event/${address}/admin/edit`}
-                          to={`/event/${address}/admin/edit`}
-                        >
-                          Event Details
-                        </ToggleLink>
-                        <ToggleLink
-                          active={
-                            pathname ===
-                            `/event/${address}/admin/smart-contract`
-                          }
-                          to={`/event/${address}/admin/smart-contract`}
-                        >
-                          Smart Contract
-                        </ToggleLink>
-                      </TabNavigation>
-                      <TabContent>
-                        <Route
-                          path={`/event/${address}/admin`}
-                          exact
-                          render={() => (
-                            <ParticipantTableList address={address} />
-                          )}
-                        />
-                        <Route
-                          path={`/event/${address}/admin/edit`}
-                          exact
-                          render={() => <EventEdit address={address} />}
-                        />
-                        <Route
-                          path={`/event/${address}/admin/smart-contract`}
-                          exact
-                          render={() => (
-                            <SmartContractFunctions party={party} />
-                          )}
-                        />
-                      </TabContent>
-                    </SingleEventAdminContainer>
-                  )
-                }}
-              </SafeQuery>
-            </>
-          )
-        }
-      </GlobalConsumer>
-    )
+  if (!userAddress) {
+    return <WarningBox>You need to be logged-in to view this page</WarningBox>
   }
+  return (
+    <>
+      <BackToEventButton to={`/event/${address}`}>
+        <BackArrow /> Back to Event
+      </BackToEventButton>
+      <SafeQuery
+        query={PARTY_QUERY}
+        variables={{ address }}
+        fetchPolicy="cache-and-network"
+      >
+        {({ data: { party } }) => {
+          const isAdmin = amAdmin(party, userAddress)
+
+          if (!isAdmin) {
+            return (
+              <WarningBox>You need to be an admin to view this page</WarningBox>
+            )
+          }
+
+          return (
+            <SingleEventAdminContainer>
+              <TabNavigation>
+                <ToggleLink
+                  active={pathname === `/event/${address}/admin`}
+                  to={`/event/${address}/admin`}
+                >
+                  Participants
+                </ToggleLink>
+                <ToggleLink
+                  active={pathname === `/event/${address}/admin/edit`}
+                  to={`/event/${address}/admin/edit`}
+                >
+                  Event Details
+                </ToggleLink>
+                <ToggleLink
+                  active={pathname === `/event/${address}/admin/smart-contract`}
+                  to={`/event/${address}/admin/smart-contract`}
+                >
+                  Smart Contract
+                </ToggleLink>
+              </TabNavigation>
+              <TabContent>
+                <Route
+                  path={`/event/${address}/admin`}
+                  exact
+                  render={() => <ParticipantTableList address={address} />}
+                />
+                <Route
+                  path={`/event/${address}/admin/edit`}
+                  exact
+                  render={() => <EventEdit address={address} />}
+                />
+                <Route
+                  path={`/event/${address}/admin/smart-contract`}
+                  exact
+                  render={() => <SmartContractFunctions party={party} />}
+                />
+              </TabContent>
+            </SingleEventAdminContainer>
+          )
+        }}
+      </SafeQuery>
+    </>
+  )
 }
 
 export default SingleEvent

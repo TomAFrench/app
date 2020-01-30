@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { useState } from 'react'
 
 import SafeMutation from '../SafeMutation'
 import Tooltip from '../Tooltip'
@@ -8,22 +8,25 @@ import {
   CREATE_LOGIN_CHALLENGE,
   SIGN_CHALLENGE_STRING
 } from '../../graphql/mutations'
-import { GlobalConsumer } from '../../GlobalState'
+import { useAuthContext } from '../../contexts/AuthContext'
 
-export default class RefreshAuthTokenButton extends Component {
-  state = {}
+const RefreshAuthTokenButton = props => {
+  const [error, setError] = useState(null)
+  const [
+    ,
+    { reloadUserAddress, setAuthTokenFromSignature, setUserProfile }
+  ] = useAuthContext()
 
-  buildCallback = ({
+  const { onClick, title } = props
+
+  const buildCallback = ({
     showTooltip,
     hideTooltip,
-    reloadUserAddress,
     createLoginChallenge,
-    signChallengeString,
-    setAuthTokenFromSignature,
-    setUserProfile
+    signChallengeString
   }) => async ({ fetchUserProfileFromServer }) => {
     try {
-      this.setState({ error: null })
+      setError(null)
 
       const address = await reloadUserAddress()
       if (!address) {
@@ -71,55 +74,45 @@ export default class RefreshAuthTokenButton extends Component {
       setUserProfile(profile)
     } catch (error) {
       hideTooltip()
-      this.setState({ error })
+      setError(error)
       throw error
     }
   }
 
-  render() {
-    const { error } = this.state
-    const { onClick, title } = this.props
-
-    return (
-      <GlobalConsumer>
-        {({ reloadUserAddress, setAuthTokenFromSignature, setUserProfile }) => (
-          <SafeMutation mutation={CREATE_LOGIN_CHALLENGE}>
-            {createLoginChallenge => (
-              <SafeMutation mutation={SIGN_CHALLENGE_STRING}>
-                {signChallengeString => (
-                  <>
-                    <Tooltip text="Please sign the login message using your wallet or Dapp browser">
-                      {({ showTooltip, hideTooltip, tooltipElement }) => (
-                        <Button
-                          data-testid="sign-in-button"
-                          analyticsId="Sign Message"
-                          onClick={() =>
-                            onClick(
-                              this.buildCallback({
-                                showTooltip,
-                                hideTooltip,
-                                reloadUserAddress,
-                                createLoginChallenge,
-                                signChallengeString,
-                                setAuthTokenFromSignature,
-                                setUserProfile
-                              })
-                            )
-                          }
-                        >
-                          {title || 'Sign in'}
-                          {tooltipElement}
-                        </Button>
-                      )}
-                    </Tooltip>
-                    {error ? <WarningBox>{`${error}`}</WarningBox> : null}
-                  </>
+  return (
+    <SafeMutation mutation={CREATE_LOGIN_CHALLENGE}>
+      {createLoginChallenge => (
+        <SafeMutation mutation={SIGN_CHALLENGE_STRING}>
+          {signChallengeString => (
+            <>
+              <Tooltip text="Please sign the login message using your wallet or Dapp browser">
+                {({ showTooltip, hideTooltip, tooltipElement }) => (
+                  <Button
+                    data-testid="sign-in-button"
+                    analyticsId="Sign Message"
+                    onClick={() =>
+                      onClick(
+                        buildCallback({
+                          showTooltip,
+                          hideTooltip,
+                          createLoginChallenge,
+                          signChallengeString
+                        })
+                      )
+                    }
+                  >
+                    {title || 'Sign in'}
+                    {tooltipElement}
+                  </Button>
                 )}
-              </SafeMutation>
-            )}
-          </SafeMutation>
-        )}
-      </GlobalConsumer>
-    )
-  }
+              </Tooltip>
+              {error ? <WarningBox>{`${error}`}</WarningBox> : null}
+            </>
+          )}
+        </SafeMutation>
+      )}
+    </SafeMutation>
+  )
 }
+
+export default RefreshAuthTokenButton

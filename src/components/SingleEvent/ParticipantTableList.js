@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import React, { Component } from 'react'
+import React, { useState } from 'react'
 import styled from 'react-emotion'
 import { PARTICIPANT_STATUS, getSocialId } from '@wearekickback/shared'
 
@@ -17,11 +17,11 @@ import DefaultButton from '../Forms/Button'
 import WarningBox from '../WarningBox'
 import SafeQuery from '../SafeQuery'
 import EventFilters from './EventFilters'
-import { GlobalConsumer } from '../../GlobalState'
 import mq from '../../mediaQuery'
 import MarkedAttended from './MarkedAttendedRP'
 import tick from '../svg/tick.svg'
 import Number from '../Icons/Number'
+import { useUserAddress } from '../../contexts/AuthContext'
 
 const SingleEventContainer = styled('div')`
   display: flex;
@@ -142,247 +142,213 @@ function getTableCell(cell, i, participant) {
   }
 }
 
-class SingleEventWrapper extends Component {
-  state = {
-    search: '',
-    selectedFilter: null
-  }
+function downloadCSV(csv, filename) {
+  let csvFile
+  let downloadLink
 
-  handleSearch = value => {
-    this.setState({
-      search: value.toLowerCase()
-    })
-  }
+  // CSV FILE
+  csvFile = new Blob([csv], { type: 'text/csv' })
 
-  handleFilterChange = selectedFilter => {
-    this.setState({ selectedFilter })
-  }
+  // Download link
+  downloadLink = document.createElement('a')
 
-  downloadCSV(csv, filename) {
-    let csvFile
-    let downloadLink
+  // File name
+  downloadLink.download = filename
 
-    // CSV FILE
-    csvFile = new Blob([csv], { type: 'text/csv' })
+  // We have to create a link to the file
+  downloadLink.href = window.URL.createObjectURL(csvFile)
 
-    // Download link
-    downloadLink = document.createElement('a')
+  // Make sure that the link is not displayed
+  downloadLink.style.display = 'none'
 
-    // File name
-    downloadLink.download = filename
+  // Add the link to your DOM
+  document.body.appendChild(downloadLink)
 
-    // We have to create a link to the file
-    downloadLink.href = window.URL.createObjectURL(csvFile)
+  // Lanzamos
+  downloadLink.click()
+}
 
-    // Make sure that the link is not displayed
-    downloadLink.style.display = 'none'
+function exportTableToCSV(html, filename) {
+  var csv = []
+  var rows = document.querySelectorAll('table tr')
 
-    // Add the link to your DOM
-    document.body.appendChild(downloadLink)
-
-    // Lanzamos
-    downloadLink.click()
-  }
-
-  exportTableToCSV(html, filename) {
-    var csv = []
-    var rows = document.querySelectorAll('table tr')
-
-    for (var i = 0; i < rows.length; i++) {
-      var row = [],
-        cols = rows[i].querySelectorAll('td, th')
-      for (var j = 0; j < cols.length; j++) {
-        if (cols[j].dataset.csv !== 'no') {
-          row.push(cols[j].innerText)
-        } else {
-          row.push('')
-        }
+  for (var i = 0; i < rows.length; i++) {
+    var row = [],
+      cols = rows[i].querySelectorAll('td, th')
+    for (var j = 0; j < cols.length; j++) {
+      if (cols[j].dataset.csv !== 'no') {
+        row.push(cols[j].innerText)
+      } else {
+        row.push('')
       }
-
-      csv.push(row.join(','))
     }
 
-    // Download CSV
-    this.downloadCSV(csv.join('\n'), filename)
+    csv.push(row.join(','))
   }
 
-  render() {
-    const { search, selectedFilter } = this.state
-    const { handleSearch, handleFilterChange } = this
-    const { address } = this.props
+  // Download CSV
+  downloadCSV(csv.join('\n'), filename)
+}
 
-    return (
-      <SingleEventContainer>
-        <GlobalConsumer>
-          {({ userAddress }) => (
-            <SafeQuery
-              query={PARTY_ADMIN_VIEW_QUERY}
-              variables={{ address }}
-              fetchPolicy="cache-and-network"
-            >
-              {({
-                data: { partyAdminView: party },
-                loading,
-                error,
-                refetch
-              }) => {
-                // no party?
-                if (!party) {
-                  if (loading) {
-                    return 'Loading ...'
-                  } else {
-                    return (
-                      <WarningBox>
-                        We could not find an event at the address {address}!
-                      </WarningBox>
-                    )
+const SingleEventWrapper = ({ address }) => {
+  const [search, setSearch] = useState('')
+  const [selectedFilter, setSelectedFilter] = useState(null)
+  const userAddress = useUserAddress()
+
+  const handleSearch = value => setSearch(value.toLowerCase())
+  const handleFilterChange = selectedFilter => setSelectedFilter(selectedFilter)
+
+  return (
+    <SingleEventContainer>
+      <SafeQuery
+        query={PARTY_ADMIN_VIEW_QUERY}
+        variables={{ address }}
+        fetchPolicy="cache-and-network"
+      >
+        {({ data: { partyAdminView: party }, loading, error, refetch }) => {
+          // no party?
+          if (!party) {
+            if (loading) {
+              return 'Loading ...'
+            } else {
+              return (
+                <WarningBox>
+                  We could not find an event at the address {address}!
+                </WarningBox>
+              )
+            }
+          }
+          const { participants, ended } = party
+
+          // pre-calculate some stuff up here
+          const preCalculatedProps = {
+            amAdmin: amAdmin(party, userAddress),
+            myParticipantEntry: getMyParticipantEntry(party, userAddress)
+          }
+
+          preCalculatedProps.amAdmin = amAdmin(party, userAddress)
+
+          return (
+            <TableList>
+              <MarkedAttendedInfo>
+                <p>Marked attended:</p>
+                <Number
+                  number={getParticipantsMarkedAttended(participants)}
+                  max={participants.length}
+                  progress={
+                    (getParticipantsMarkedAttended(participants) /
+                      participants.length) *
+                    100
                   }
-                }
-                const { participants, ended } = party
+                />
+              </MarkedAttendedInfo>
+              {participants.length > 0 ? (
+                <>
+                  <DownloadButton
+                    type="hollow"
+                    onClick={() => {
+                      const html = document.querySelector('table').outerHTML
+                      exportTableToCSV(html, 'event.csv')
+                    }}
+                  >
+                    Download CSV
+                  </DownloadButton>
+                  <EventFilters
+                    handleSearch={handleSearch}
+                    handleFilterChange={handleFilterChange}
+                    amAdmin={amAdmin}
+                    search={search}
+                    enableQrCodeScanner={amAdmin}
+                    ended={ended}
+                  />
 
-                // pre-calculate some stuff up here
-                const preCalculatedProps = {
-                  amAdmin: amAdmin(party, userAddress),
-                  myParticipantEntry: getMyParticipantEntry(party, userAddress)
-                }
+                  <Table>
+                    <Tbody>
+                      <TR>
+                        <TH>Action</TH>
+                        <TH>Status</TH>
+                        {cells.map(
+                          cell =>
+                            !cell.hidden && (
+                              <TH key={cell.label}>{cell.label}</TH>
+                            )
+                        )}
+                        <TH>Marketing</TH>
+                      </TR>
 
-                preCalculatedProps.amAdmin = amAdmin(party, userAddress)
+                      {participants
+                        .sort(sortParticipants)
+                        .filter(filterParticipants(selectedFilter, search))
+                        .map(participant => {
+                          const { status } = participant
+                          const withdrawn =
+                            status === PARTICIPANT_STATUS.WITHDRAWN_PAYOUT
+                          const attended =
+                            status === PARTICIPANT_STATUS.SHOWED_UP || withdrawn
 
-                return (
-                  <TableList>
-                    <MarkedAttendedInfo>
-                      <p>Marked attended:</p>
-                      <Number
-                        number={getParticipantsMarkedAttended(participants)}
-                        max={participants.length}
-                        progress={
-                          (getParticipantsMarkedAttended(participants) /
-                            participants.length) *
-                          100
-                        }
-                      />
-                    </MarkedAttendedInfo>
-                    {participants.length > 0 ? (
-                      <>
-                        <DownloadButton
-                          type="hollow"
-                          onClick={() => {
-                            const html = document.querySelector('table')
-                              .outerHTML
-                            this.exportTableToCSV(html, 'event.csv')
-                          }}
-                        >
-                          Download CSV
-                        </DownloadButton>
-                        <EventFilters
-                          handleSearch={handleSearch}
-                          handleFilterChange={handleFilterChange}
-                          amAdmin={amAdmin}
-                          search={search}
-                          enableQrCodeScanner={amAdmin}
-                          ended={ended}
-                        />
-
-                        <Table>
-                          <Tbody>
-                            <TR>
-                              <TH>Action</TH>
-                              <TH>Status</TH>
-                              {cells.map(
-                                cell =>
-                                  !cell.hidden && (
-                                    <TH key={cell.label}>{cell.label}</TH>
-                                  )
-                              )}
-                              <TH>Marketing</TH>
-                            </TR>
-
-                            {participants
-                              .sort(sortParticipants)
-                              .filter(
-                                filterParticipants(selectedFilter, search)
-                              )
-                              .map(participant => {
-                                const { status } = participant
-                                const withdrawn =
-                                  status === PARTICIPANT_STATUS.WITHDRAWN_PAYOUT
-                                const attended =
-                                  status === PARTICIPANT_STATUS.SHOWED_UP ||
-                                  withdrawn
-
-                                return (
-                                  <TR key={participant.user.id}>
-                                    <TD data-csv="no">
-                                      {' '}
-                                      {ended ? (
-                                        ''
-                                      ) : (
-                                        <>
-                                          <MarkedAttended
-                                            party={party}
-                                            participant={participant}
-                                            refetch={refetch}
+                          return (
+                            <TR key={participant.user.id}>
+                              <TD data-csv="no">
+                                {' '}
+                                {ended ? (
+                                  ''
+                                ) : (
+                                  <>
+                                    <MarkedAttended
+                                      party={party}
+                                      participant={participant}
+                                      refetch={refetch}
+                                    >
+                                      {({ markAttended, unmarkAttended }) =>
+                                        attended ? (
+                                          <Button
+                                            wide
+                                            onClick={() => unmarkAttended()}
+                                            analyticsId="Unmark Attendee"
                                           >
-                                            {({
-                                              markAttended,
-                                              unmarkAttended
-                                            }) =>
-                                              attended ? (
-                                                <Button
-                                                  wide
-                                                  onClick={() =>
-                                                    unmarkAttended()
-                                                  }
-                                                  analyticsId="Unmark Attendee"
-                                                >
-                                                  Unmark attended
-                                                </Button>
-                                              ) : (
-                                                <Button
-                                                  wide
-                                                  type="hollow"
-                                                  onClick={() => markAttended()}
-                                                  analyticsId="Mark Attendee"
-                                                >
-                                                  Mark attended <Tick />
-                                                </Button>
-                                              )
-                                            }
-                                          </MarkedAttended>
-                                        </>
-                                      )}
-                                    </TD>
-                                    <TD>
-                                      {getStatus(ended, attended, withdrawn)}
-                                    </TD>
-                                    {cells.map((cell, i) =>
-                                      getTableCell(cell, i, participant)
-                                    )}
-                                    <TD>
-                                      {participant.user.legal &&
-                                      participant.user.legal[2] &&
-                                      participant.user.legal[2].accepted
-                                        ? 'accepted'
-                                        : 'denied'}
-                                    </TD>
-                                  </TR>
-                                )
-                              })}
-                          </Tbody>
-                        </Table>
-                      </>
-                    ) : (
-                      <NoParticipants>No one is attending</NoParticipants>
-                    )}
-                  </TableList>
-                )
-              }}
-            </SafeQuery>
-          )}
-        </GlobalConsumer>
-      </SingleEventContainer>
-    )
-  }
+                                            Unmark attended
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            wide
+                                            type="hollow"
+                                            onClick={() => markAttended()}
+                                            analyticsId="Mark Attendee"
+                                          >
+                                            Mark attended <Tick />
+                                          </Button>
+                                        )
+                                      }
+                                    </MarkedAttended>
+                                  </>
+                                )}
+                              </TD>
+                              <TD>{getStatus(ended, attended, withdrawn)}</TD>
+                              {cells.map((cell, i) =>
+                                getTableCell(cell, i, participant)
+                              )}
+                              <TD>
+                                {participant.user.legal &&
+                                participant.user.legal[2] &&
+                                participant.user.legal[2].accepted
+                                  ? 'accepted'
+                                  : 'denied'}
+                              </TD>
+                            </TR>
+                          )
+                        })}
+                    </Tbody>
+                  </Table>
+                </>
+              ) : (
+                <NoParticipants>No one is attending</NoParticipants>
+              )}
+            </TableList>
+          )
+        }}
+      </SafeQuery>
+    </SingleEventContainer>
+  )
 }
 
 export default SingleEventWrapper
