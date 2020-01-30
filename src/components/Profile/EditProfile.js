@@ -30,7 +30,6 @@ const SubmitButton = styled(DefaultButton)`
 
 export default props => {
   const [, { closeModal }] = useModalContext()
-  console.log(useModalContext())
 
   const submit = ({
     prepareValuesFn,
